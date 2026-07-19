@@ -1,0 +1,39 @@
+# Datatypes
+ClickEncoder	KEYWORD1
+DecoderType	KEYWORD1
+ButtonState	KEYWORD1
+Config	KEYWORD1
+AccelConfig	KEYWORD1
+
+
+# Methods
+service	KEYWORD2
+getValue	KEYWORD2
+getButton	KEYWORD2
+setBounds	KEYWORD2
+clearBounds	KEYWORD2
+setCurrentValue	KEYWORD2
+getCurrentValue	KEYWORD2
+getMin	KEYWORD2
+getMax	KEYWORD2
+setDoubleClickEnabled	KEYWORD2
+getDoubleClickEnabled	KEYWORD2
+setAccelerationEnabled	KEYWORD2
+getAccelerationEnabled	KEYWORD2
+getAcceleration	KEYWORD2
+setAccelConfig	KEYWORD2
+getAccelConfig	KEYWORD2
+isMoving	KEYWORD2
+reset	KEYWORD2
+
+# Constants
+Open	LITERAL1
+Pressed	LITERAL1
+Held	LITERAL1
+Released	LITERAL1
+Clicked	LITERAL1
+DoubleClicked	LITERAL1
+RepeatTicks	LITERAL1
+Normal	LITERAL1
+Flaky	LITERAL1
+HalfStep	LITERAL1
