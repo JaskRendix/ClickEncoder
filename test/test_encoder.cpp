@@ -92,7 +92,7 @@ TEST_CASE("Bounds: clamping and wrap-around") {
 
     digitalReadFn = [&](uint8_t p) { return (p == 2 ? LOW : HIGH); };
     enc.service();
-    enc.getValue(); // consume the pending delta so trackAbsoluteValue updates
+    enc.getValue(); // consume the pending delta so trackedValue updates
 
     REQUIRE(enc.getTrackedValue() == 9);
   }

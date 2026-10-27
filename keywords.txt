@@ -1,6 +1,6 @@
 # Datatypes
 ClickEncoder	KEYWORD1
-DecoderType	KEYWORD1
+DecoderMode	KEYWORD1
 ButtonState	KEYWORD1
 Config	KEYWORD1
 AccelConfig	KEYWORD1

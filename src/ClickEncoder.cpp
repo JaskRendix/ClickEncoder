@@ -65,17 +65,17 @@ void ClickEncoder::setBounds(int16_t min, int16_t max, bool wrapAround) {
   wrapBounds = wrapAround;
   hasBounds = true;
 
-  if (trackAbsoluteValue < minValue)
-    trackAbsoluteValue = minValue;
-  if (trackAbsoluteValue > maxValue)
-    trackAbsoluteValue = maxValue;
+  if (trackedValue < minValue)
+    trackedValue = minValue;
+  if (trackedValue > maxValue)
+    trackedValue = maxValue;
 }
 
 void ClickEncoder::clearBounds() { hasBounds = false; }
 
-void ClickEncoder::setCurrentValue(int16_t v) { trackAbsoluteValue = v; }
+void ClickEncoder::setCurrentValue(int16_t v) { trackedValue = v; }
 
-int16_t ClickEncoder::getTrackedValue() const { return trackAbsoluteValue; }
+int16_t ClickEncoder::getTrackedValue() const { return trackedValue; }
 
 void ClickEncoder::reset() {
   ENC_ENTER_CRITICAL();
@@ -101,8 +101,8 @@ void ClickEncoder::service() {
   // -------------------------------------------------------------------------
   // Modern C++ decoder selection (no preprocessor)
   // -------------------------------------------------------------------------
-  if (decoderMode == DecoderType::Flaky ||
-      decoderMode == DecoderType::HalfStep) {
+  if (decoderMode == DecoderMode::Flaky ||
+      decoderMode == DecoderMode::HalfStep) {
 
     localLast = (localLast << 2) & 0x0F;
 
@@ -111,7 +111,7 @@ void ClickEncoder::service() {
     if (digitalRead(cfg.pinB) == cfg.encoderPinsActive)
       localLast |= 1;
 
-    int8_t tbl = (decoderMode == DecoderType::HalfStep)
+    int8_t tbl = (decoderMode == DecoderMode::HalfStep)
                      ? tableHalfStep[localLast]
                      : tableNormal[localLast];
 
@@ -223,7 +223,7 @@ int16_t ClickEncoder::getValue() {
   int16_t step = val * accelMul;
 
   if (hasBounds) {
-    int32_t target = (int32_t)trackAbsoluteValue + step;
+    int32_t target = (int32_t)trackedValue + step;
 
     if (wrapBounds) {
       int32_t range = (maxValue - minValue + 1);
@@ -238,8 +238,8 @@ int16_t ClickEncoder::getValue() {
         target = maxValue;
     }
 
-    step = (int16_t)(target - trackAbsoluteValue);
-    trackAbsoluteValue = (int16_t)target;
+    step = (int16_t)(target - trackedValue);
+    trackedValue = (int16_t)target;
   }
 
   return step;

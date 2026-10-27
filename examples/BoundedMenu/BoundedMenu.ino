@@ -48,7 +48,7 @@ void setup() {
 void loop() {
   encoder->service();
 
-  // getValue() also advances/clamps/wraps trackAbsoluteValue internally
+  // getValue() also advances/clamps/wraps trackedValue internally
   // when bounds are set, so just polling it each loop is enough to keep
   // getTrackedValue() in sync -- no manual arithmetic needed here.
   encoder->getValue();
