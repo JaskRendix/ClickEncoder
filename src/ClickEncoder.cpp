@@ -8,29 +8,21 @@
 // Timer-based rotary encoder logic by Peter Dannegger
 // http://www.mikrocontroller.net/articles/Drehgeber
 //
-// Modernized fork: portable C++, strategy-based decoders
+// Modernized fork: portable C++, compile-time decoder selection
 // ----------------------------------------------------------------------------
 
 #include "ClickEncoder.h"
 
 // Arduino core already defines noInterrupts()/interrupts() portably across
-// AVR, SAMD, ESP32, RP2040, etc. Using those instead of raw cli()/sei()
-// means the getValue() critical section is actually safe off-AVR too,
-// which matters if service() runs from a hardware timer ISR.
-//
-// ARDUINO is defined by every Arduino core (it's the IDE/core version
-// number). Gate on that rather than assuming noInterrupts()/interrupts()
-// exist unconditionally -- keeps this file compilable in host-based unit
-// tests or other non-Arduino builds that only stub Arduino.h, and avoids
-// false "undefined identifier" errors from IntelliSense configs that
-// aren't pointed at a board core.
-#if defined(ARDUINO)
-#define ENC_ENTER_CRITICAL() noInterrupts()
-#define ENC_EXIT_CRITICAL() interrupts()
-#elif defined(ARDUINO_ARCH_AVR)
+// AVR, SAMD, ESP32, RP2040, etc. Use those in Arduino builds. Keep the AVR
+// fallback for AVR-specific builds that do not define ARDUINO.
+#if defined(ARDUINO_ARCH_AVR)
 #include <avr/interrupt.h>
 #define ENC_ENTER_CRITICAL() cli()
 #define ENC_EXIT_CRITICAL() sei()
+#elif defined(ARDUINO)
+#define ENC_ENTER_CRITICAL() noInterrupts()
+#define ENC_EXIT_CRITICAL() interrupts()
 #else
 #define ENC_ENTER_CRITICAL()
 #define ENC_EXIT_CRITICAL()
@@ -78,6 +70,7 @@ void ClickEncoder::setCurrentValue(int16_t v) { trackedValue = v; }
 int16_t ClickEncoder::getTrackedValue() const { return trackedValue; }
 
 void ClickEncoder::reset() {
+  // Reset transient state; preserve trackedValue and configured bounds.
   ENC_ENTER_CRITICAL();
   delta = 0;
   acceleration = 0;
@@ -99,7 +92,7 @@ void ClickEncoder::service() {
   int16_t localLast = last;
 
   // -------------------------------------------------------------------------
-  // Modern C++ decoder selection (no preprocessor)
+  // Compile-time decoder selection
   // -------------------------------------------------------------------------
   if (decoderMode == DecoderMode::Flaky ||
       decoderMode == DecoderMode::HalfStep) {
@@ -204,9 +197,15 @@ void ClickEncoder::service() {
 }
 
 int16_t ClickEncoder::getValue() {
+  int16_t val;
+  uint16_t rawAccel;
+
+  // delta and acceleration are updated by service(), which may run in an ISR.
+  // Snapshot both atomically so the calculation uses a consistent value.
   ENC_ENTER_CRITICAL();
-  int16_t val = delta;
+  val = delta;
   delta = 0;
+  rawAccel = acceleration;
   ENC_EXIT_CRITICAL();
 
   if (cfg.stepsPerNotch == 4)
@@ -217,7 +216,6 @@ int16_t ClickEncoder::getValue() {
   if (val == 0)
     return 0;
 
-  uint16_t rawAccel = acceleration;
   int16_t accelMul = 1 + ((uint32_t)rawAccel * rawAccel >> 18);
 
   int16_t step = val * accelMul;
