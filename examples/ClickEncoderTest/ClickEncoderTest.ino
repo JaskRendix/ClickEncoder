@@ -1,4 +1,4 @@
-#define WITH_LCD 1
+#define WITH_LCD
 
 #include <ClickEncoder.h>
 
@@ -74,7 +74,8 @@ LiquidCrystal lcd(LCD_RS, LCD_RW, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 #endif
 
 ClickEncoder *encoder;
-int16_t last, value;
+int16_t last = -1;
+int16_t value = 0;
 
 void timerIsr() { encoder->service(); }
 
@@ -107,8 +108,6 @@ void setup() {
 #warning                                                                       \
     "No hardware timer configured for this platform; polling service() from loop() instead."
 #endif
-
-  last = -1;
 }
 
 void loop() {
@@ -127,7 +126,7 @@ void loop() {
     Serial.println(value);
 #ifdef WITH_LCD
     lcd.setCursor(0, 0);
-    lcd.print("         ");
+    lcd.print("                    "); // 20 spaces
     lcd.setCursor(0, 0);
     lcd.print(value);
 #endif
@@ -136,27 +135,33 @@ void loop() {
   ClickEncoder::ButtonState b = encoder->getButton();
   if (b != ClickEncoder::ButtonState::Open) {
     Serial.print("Button: ");
+
 #define VERBOSECASE(label)                                                     \
   case label:                                                                  \
     Serial.println(#label);                                                    \
     break;
+
     switch (b) {
       VERBOSECASE(ClickEncoder::ButtonState::Pressed);
       VERBOSECASE(ClickEncoder::ButtonState::Held);
       VERBOSECASE(ClickEncoder::ButtonState::Released);
       VERBOSECASE(ClickEncoder::ButtonState::Clicked);
+      VERBOSECASE(ClickEncoder::ButtonState::RepeatTicks);
+
     case ClickEncoder::ButtonState::DoubleClicked:
       Serial.println("ClickEncoder::ButtonState::DoubleClicked");
       encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
       Serial.print("  Acceleration is ");
-      Serial.println((encoder->getAccelerationEnabled()) ? "enabled"
-                                                         : "disabled");
+      Serial.println(encoder->getAccelerationEnabled() ? "enabled" : "disabled");
 #ifdef WITH_LCD
       displayAccelerationStatus();
 #endif
       break;
+
     default:
       break;
     }
+
+#undef VERBOSECASE
   }
 }
