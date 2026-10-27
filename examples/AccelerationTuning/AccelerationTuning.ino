@@ -9,7 +9,11 @@
 //   - reset(): clear button/click timing and pending delta state
 //
 // Double-click cycles through a few preset acceleration curves so you can
-// feel the difference live. Holding the button calls reset().
+// feel the difference live. Releasing the button calls reset().
+//
+// This example polls service() from loop() for simplicity.
+// For best acceleration and button timing accuracy, use a hardware timer and
+// call service() approximately every 1 ms.
 // -----------------------------------------------------------------------------
 
 #include <ClickEncoder.h>
@@ -32,13 +36,21 @@ const NamedAccelConfig PRESETS[] = {
     {"Default", {4000, 45, 4}},
     {"Aggressive", {6000, 90, 6}},
 };
-constexpr int16_t PRESET_COUNT = sizeof(PRESETS) / sizeof(PRESETS[0]);
+constexpr size_t PRESET_COUNT = sizeof(PRESETS) / sizeof(PRESETS[0]);
 int16_t presetIndex = 1; // start on "Default"
 
 void applyPreset() {
   encoder->setAccelConfig(PRESETS[presetIndex].cfg);
   Serial.print("Acceleration preset: ");
   Serial.println(PRESETS[presetIndex].name);
+
+  const auto &cfg = encoder->getAccelConfig();
+  Serial.print("Config: top=");
+  Serial.print(cfg.top);
+  Serial.print(" inc=");
+  Serial.print(cfg.inc);
+  Serial.print(" dec=");
+  Serial.println(cfg.dec);
 }
 
 void setup() {
@@ -49,7 +61,7 @@ void setup() {
 
   applyPreset();
   Serial.println("Turn fast vs. slow to feel the acceleration curve.");
-  Serial.println("Double-click to cycle presets, hold to reset().");
+  Serial.println("Double-click to cycle presets, hold and release to reset().");
 }
 
 void loop() {
@@ -60,9 +72,8 @@ void loop() {
     position += delta;
     Serial.print("Position: ");
     Serial.print(position);
-    Serial.print("  (raw accel: ");
-    Serial.print(encoder->getAcceleration());
-    Serial.println(")");
+    Serial.print("  Accel=");
+    Serial.println(encoder->getAcceleration());
   }
 
   switch (encoder->getButton()) {
@@ -70,10 +81,12 @@ void loop() {
     presetIndex = (presetIndex + 1) % PRESET_COUNT;
     applyPreset();
     break;
-  case ClickEncoder::ButtonState::Held:
+
+  case ClickEncoder::ButtonState::Released:
     encoder->reset();
     Serial.println("Encoder state reset.");
     break;
+
   default:
     break;
   }
