@@ -126,6 +126,14 @@ TEST_CASE("Bounds: clamping and wrap-around") {
 
     REQUIRE(enc.getTrackedValue() == 10);
   }
+
+  SECTION("setBounds clamps value below minimum") {
+    enc.setCurrentValue(-100);
+
+    enc.setBounds(0, 10, false);
+
+    REQUIRE(enc.getTrackedValue() == 0);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -398,4 +406,27 @@ TEST_CASE("getButton consumes one-shot button states") {
 
   REQUIRE(enc.getButton() == ClickEncoder::ButtonState::Pressed);
   REQUIRE(enc.getButton() == ClickEncoder::ButtonState::Open);
+}
+
+TEST_CASE("setAccelerationEnabled(false) clears acceleration") {
+  reset_mock_hardware();
+
+  ClickEncoder::Config cfg{2, 3, -1, 1};
+  ClickEncoder enc(cfg);
+
+  for (int i = 0; i < 20; ++i) {
+    digitalReadFn = [&](uint8_t p) { return (p == 2 ? LOW : HIGH); };
+    enc.service();
+
+    digitalReadFn = [&](uint8_t p) { return (p == 2 ? LOW : LOW); };
+    enc.service();
+
+    (void)enc.getValue();
+  }
+
+  REQUIRE(enc.getAcceleration() > 0);
+
+  enc.setAccelerationEnabled(false);
+
+  REQUIRE(enc.getAcceleration() == 0);
 }
