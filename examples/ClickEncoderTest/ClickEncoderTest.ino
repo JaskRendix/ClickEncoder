@@ -152,7 +152,8 @@ void loop() {
       Serial.println("ClickEncoder::ButtonState::DoubleClicked");
       encoder->setAccelerationEnabled(!encoder->getAccelerationEnabled());
       Serial.print("  Acceleration is ");
-      Serial.println(encoder->getAccelerationEnabled() ? "enabled" : "disabled");
+      Serial.println(encoder->getAccelerationEnabled() ? "enabled"
+                                                       : "disabled");
 #ifdef WITH_LCD
       displayAccelerationStatus();
 #endif

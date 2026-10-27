@@ -54,6 +54,10 @@ void setup() {
   volumeEncoder = new ClickEncoder(volCfg);
   brightnessEncoder = new ClickEncoder(brightCfg);
 
+  // UI values typically want one step per detent.
+  volumeEncoder->setAccelerationEnabled(false);
+  brightnessEncoder->setAccelerationEnabled(false);
+
   volumeEncoder->setBounds(0, 100, false);
   volumeEncoder->setCurrentValue(50);
   brightnessEncoder->setBounds(0, 100, false);
@@ -78,12 +82,14 @@ void loop() {
   brightnessEncoder->service();
 #endif
 
-  if (volumeEncoder->getValue() != 0) {
+  int16_t volumeDelta = volumeEncoder->getValue();
+  if (volumeDelta != 0) {
     Serial.print("Volume: ");
     Serial.println(volumeEncoder->getTrackedValue());
   }
 
-  if (brightnessEncoder->getValue() != 0) {
+  int16_t brightnessDelta = brightnessEncoder->getValue();
+  if (brightnessDelta != 0) {
     Serial.print("Brightness: ");
     Serial.println(brightnessEncoder->getTrackedValue());
   }
