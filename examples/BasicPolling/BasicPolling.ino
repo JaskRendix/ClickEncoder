@@ -47,16 +47,28 @@ void loop() {
   }
 
   switch (encoder->getButton()) {
+  case ClickEncoder::ButtonState::Pressed:
+    Serial.println("Button: pressed");
+    break;
+
+  case ClickEncoder::ButtonState::Released:
+    Serial.println("Button: released");
+    break;
+
   case ClickEncoder::ButtonState::Clicked:
     Serial.println("Button: clicked");
     break;
+
   case ClickEncoder::ButtonState::DoubleClicked:
     Serial.println("Button: double-clicked");
     break;
+
   case ClickEncoder::ButtonState::Held:
+    // Held remains active while the button is held down, so this may repeat.
     Serial.println("Button: held");
     break;
+
   default:
-    break; // Open, Pressed, Released, RepeatTicks -- not interesting here
+    break; // Open, RepeatTicks -- not interesting here
   }
 }
