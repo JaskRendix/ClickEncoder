@@ -27,7 +27,7 @@ void timerIsr() {
 }
 
 void setup() {
-  ClickEncoder::Config cfg{2, 3, 4}; // pinA, pinB, pinBTN
+  ClickEncoder::Config cfg{2, 3, 4}; // pinA, pinB, pinButton
   encoder = new ClickEncoder(cfg);
 
   Timer1.initialize(1000); // 1ms
@@ -53,23 +53,23 @@ void loop() {
 struct Config {
   uint8_t pinA;
   uint8_t pinB;
-  int16_t pinBTN = -1;         // -1 disables button handling
+  int16_t pinButton = -1;         // -1 disables button handling
   uint8_t stepsPerNotch = 1;   // 1, 2, or 4 depending on encoder hardware
-  uint8_t coderPinsActive = LOW;
-  uint8_t btnPinActive = LOW;
+  uint8_t encoderPinsActive = LOW;
+  uint8_t buttonPinActive = LOW;
 };
 ```
 
 Pins are configured as `INPUT_PULLUP` (or `INPUT` if the active level is `HIGH`) internally; no external pull resistors are required for the common case. Any GPIO pin can be used — no interrupt capability is needed, since decoding happens on the timer-driven `service()` call, not on pin-change interrupts.
 
-If the encoder has no button, omit `pinBTN` (it defaults to `-1`) and don't call any of the button-related methods.
+If the encoder has no button, omit `pinButton` (it defaults to `-1`) and don't call any of the button-related methods.
 
 ### Rotation
 
 - `getValue()` — returns and clears the accumulated step delta since the last call, scaled by `stepsPerNotch` and by acceleration if enabled. If bounds are set, the return value is the actual (clamped or wrapped) change applied.
 - `setBounds(min, max, wrapAround)` — constrains the tracked absolute value to `[min, max]`. With `wrapAround = true`, exceeding a bound wraps to the other end instead of clamping.
 - `clearBounds()` — removes bounds tracking.
-- `setCurrentValue(v)` / `getCurrentValue()` — set/read the tracked absolute value. `getCurrentValue()` reflects the state as of the last `getValue()` call, not the raw pin state — it does not update on its own between `getValue()` calls.
+- `setCurrentValue(v)` / `getTrackedValue()` — set/read the tracked absolute value. `getTrackedValue()` reflects the state as of the last `getValue()` call, not the raw pin state — it does not update on its own between `getValue()` calls.
 - `isMoving()` — returns true if there is unconsumed rotation delta pending.
 
 ### Acceleration

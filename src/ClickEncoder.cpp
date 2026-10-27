@@ -42,19 +42,19 @@ static constexpr uint32_t ENC_HOLDTIME = 1000;
 static constexpr uint16_t ENC_REPEAT_RATE = 150;
 
 ClickEncoder::ClickEncoder(const Config &cfg) : cfg(cfg) {
-  uint8_t coderType = (cfg.coderPinsActive == LOW) ? INPUT_PULLUP : INPUT;
+  uint8_t coderType = (cfg.encoderPinsActive == LOW) ? INPUT_PULLUP : INPUT;
   pinMode(cfg.pinA, coderType);
   pinMode(cfg.pinB, coderType);
 
-  if (cfg.pinBTN >= 0) {
-    uint8_t btnType = (cfg.btnPinActive == LOW) ? INPUT_PULLUP : INPUT;
-    pinMode(cfg.pinBTN, btnType);
+  if (cfg.pinButton >= 0) {
+    uint8_t btnType = (cfg.buttonPinActive == LOW) ? INPUT_PULLUP : INPUT;
+    pinMode(cfg.pinButton, btnType);
   }
 
   int16_t init = 0;
-  if (digitalRead(cfg.pinA) == cfg.coderPinsActive)
+  if (digitalRead(cfg.pinA) == cfg.encoderPinsActive)
     init = 3;
-  if (digitalRead(cfg.pinB) == cfg.coderPinsActive)
+  if (digitalRead(cfg.pinB) == cfg.encoderPinsActive)
     init ^= 1;
   last = init;
 }
@@ -75,7 +75,7 @@ void ClickEncoder::clearBounds() { hasBounds = false; }
 
 void ClickEncoder::setCurrentValue(int16_t v) { trackAbsoluteValue = v; }
 
-int16_t ClickEncoder::getCurrentValue() const { return trackAbsoluteValue; }
+int16_t ClickEncoder::getTrackedValue() const { return trackAbsoluteValue; }
 
 void ClickEncoder::reset() {
   ENC_ENTER_CRITICAL();
@@ -106,9 +106,9 @@ void ClickEncoder::service() {
 
     localLast = (localLast << 2) & 0x0F;
 
-    if (digitalRead(cfg.pinA) == cfg.coderPinsActive)
+    if (digitalRead(cfg.pinA) == cfg.encoderPinsActive)
       localLast |= 2;
-    if (digitalRead(cfg.pinB) == cfg.coderPinsActive)
+    if (digitalRead(cfg.pinB) == cfg.encoderPinsActive)
       localLast |= 1;
 
     int8_t tbl = (decoderMode == DecoderType::HalfStep)
@@ -122,9 +122,9 @@ void ClickEncoder::service() {
 
   } else {
     int8_t curr = 0;
-    if (digitalRead(cfg.pinA) == cfg.coderPinsActive)
+    if (digitalRead(cfg.pinA) == cfg.encoderPinsActive)
       curr = 3;
-    if (digitalRead(cfg.pinB) == cfg.coderPinsActive)
+    if (digitalRead(cfg.pinB) == cfg.encoderPinsActive)
       curr ^= 1;
 
     int8_t diff = localLast - curr;
@@ -145,12 +145,12 @@ void ClickEncoder::service() {
   // -------------------------------------------------------------------------
   // Button processing
   // -------------------------------------------------------------------------
-  if (cfg.pinBTN >= 0 && (now - lastButtonCheck >= ENC_BUTTONINTERVAL)) {
+  if (cfg.pinButton >= 0 && (now - lastButtonCheck >= ENC_BUTTONINTERVAL)) {
     lastButtonCheck = now;
 
     ButtonState st = button;
 
-    if (digitalRead(cfg.pinBTN) == cfg.btnPinActive) {
+    if (digitalRead(cfg.pinButton) == cfg.buttonPinActive) {
       // Rising edge of the press: report Pressed once, before Held kicks
       // in. Previously ButtonState::Pressed was declared but never
       // assigned anywhere, so callers switching on it would never see it.

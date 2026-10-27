@@ -80,12 +80,12 @@ void loop() {
 
   if (volumeEncoder->getValue() != 0) {
     Serial.print("Volume: ");
-    Serial.println(volumeEncoder->getCurrentValue());
+    Serial.println(volumeEncoder->getTrackedValue());
   }
 
   if (brightnessEncoder->getValue() != 0) {
     Serial.print("Brightness: ");
-    Serial.println(brightnessEncoder->getCurrentValue());
+    Serial.println(brightnessEncoder->getTrackedValue());
   }
 
   if (volumeEncoder->getButton() == ClickEncoder::ButtonState::Clicked) {

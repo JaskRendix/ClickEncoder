@@ -13,7 +13,7 @@ getButton	KEYWORD2
 setBounds	KEYWORD2
 clearBounds	KEYWORD2
 setCurrentValue	KEYWORD2
-getCurrentValue	KEYWORD2
+getTrackedValue	KEYWORD2
 getMin	KEYWORD2
 getMax	KEYWORD2
 setDoubleClickEnabled	KEYWORD2

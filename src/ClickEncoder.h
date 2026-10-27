@@ -36,10 +36,10 @@ public:
   struct Config {
     uint8_t pinA;
     uint8_t pinB;
-    int16_t pinBTN = -1;
+    int16_t pinButton = -1;
     uint8_t stepsPerNotch = 1;
-    uint8_t coderPinsActive = LOW;
-    uint8_t btnPinActive = LOW;
+    uint8_t encoderPinsActive = LOW;
+    uint8_t buttonPinActive = LOW;
   };
 
   // Optional tuning knobs for the acceleration curve. Defaults reproduce
@@ -62,7 +62,7 @@ public:
   void setBounds(int16_t min, int16_t max, bool wrapAround = false);
   void clearBounds();
   void setCurrentValue(int16_t v);
-  int16_t getCurrentValue() const;
+  int16_t getTrackedValue() const;
   int16_t getMin() const { return minValue; }
   int16_t getMax() const { return maxValue; }
 

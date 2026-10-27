@@ -94,7 +94,7 @@ TEST_CASE("Bounds: clamping and wrap-around") {
     enc.service();
     enc.getValue(); // consume the pending delta so trackAbsoluteValue updates
 
-    REQUIRE(enc.getCurrentValue() == 9);
+    REQUIRE(enc.getTrackedValue() == 9);
   }
 
   SECTION("Wrap-around upper → lower only when exceeding bounds") {
@@ -105,7 +105,7 @@ TEST_CASE("Bounds: clamping and wrap-around") {
     enc.service();
     enc.getValue();
 
-    REQUIRE(enc.getCurrentValue() == 9);
+    REQUIRE(enc.getTrackedValue() == 9);
   }
 
   SECTION("Wrap-around lower → upper only when exceeding bounds") {
@@ -116,7 +116,7 @@ TEST_CASE("Bounds: clamping and wrap-around") {
     enc.service();
     enc.getValue();
 
-    REQUIRE(enc.getCurrentValue() == 1);
+    REQUIRE(enc.getTrackedValue() == 1);
   }
 }
 

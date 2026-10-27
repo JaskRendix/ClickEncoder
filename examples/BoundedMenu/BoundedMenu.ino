@@ -25,7 +25,7 @@ ClickEncoder *encoder;
 int16_t lastShown = -1;
 
 void printMenu() {
-  int16_t idx = encoder->getCurrentValue();
+  int16_t idx = encoder->getTrackedValue();
   Serial.print("> ");
   Serial.println(MENU_ITEMS[idx]);
 }
@@ -42,7 +42,7 @@ void setup() {
 
   Serial.println("BoundedMenu ready. Rotate to browse, click to select.");
   printMenu();
-  lastShown = encoder->getCurrentValue();
+  lastShown = encoder->getTrackedValue();
 }
 
 void loop() {
@@ -50,10 +50,10 @@ void loop() {
 
   // getValue() also advances/clamps/wraps trackAbsoluteValue internally
   // when bounds are set, so just polling it each loop is enough to keep
-  // getCurrentValue() in sync -- no manual arithmetic needed here.
+  // getTrackedValue() in sync -- no manual arithmetic needed here.
   encoder->getValue();
 
-  int16_t idx = encoder->getCurrentValue();
+  int16_t idx = encoder->getTrackedValue();
   if (idx != lastShown) {
     lastShown = idx;
     printMenu();
