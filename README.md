@@ -1,33 +1,53 @@
 # ClickEncoder
 
-Arduino library for rotary encoders with an integrated push button. Provides quadrature decoding, optional rotational acceleration, and button state detection (click, double-click, hold, release).
+A rotary encoder library with a built-in push button.
 
-This is a modernized fork of the original [0xPIT/encoder](https://github.com/0xPIT/encoder) library. The core decoding and timing logic is unchanged; the API has been restructured to use a `Config` struct and a scoped `enum class` instead of positional constructor arguments and preprocessor macros.
+- Reads quadrature rotation
+- Handles clicks, double-clicks, holds, releases, and repeats
+- Supports rotation acceleration
+- Works with regular GPIO pins—no pin-change interrupts needed
+- Lets multiple encoders share one timer interrupt
+- Lets you tune acceleration while the program runs
 
-## Requirements
+This fork updates the original [0xPIT/encoder](https://github.com/0xPIT/encoder) API with a `Config` struct and scoped `enum class` types. The encoder and button logic comes from the original library.
 
-- C++11 or later.
-- A periodic call to `service()`, ideally every ~1ms, from a hardware timer interrupt. `service()` can be called from any GPIO pin state, not just interrupt-capable pins — the timer drives polling, not pin-change interrupts.
-- No timer library is bundled. Use whatever your platform provides: [TimerOne](http://playground.arduino.cc/Code/Timer1) on AVR, `Ticker` on ESP32 (included with the ESP32 Arduino core), or an equivalent for other platforms. See `examples/` for both.
+## What you need
 
-## Installation
+- C++11 or later
+- A call to `service()` on a timer, about every 1 ms
+- A timer library for your board:
+  - AVR: [TimerOne](http://playground.arduino.cc/Code/Timer1)
+  - ESP32: `Ticker`, included with the ESP32 Arduino core
+  - Other platforms: an equivalent timer
 
-Copy this repository into your Arduino `libraries/` folder, or install via the Arduino Library Manager / PlatformIO if published there. The library layout follows the 1.5 format (`src/` contains the sources; `library.properties` at the root marks the format).
+The library polls the pins on a timer, so you can use any digital pins.
 
-## Usage
+## Install
+
+Copy this repo into your Arduino `libraries/` folder. You can also install it through the Arduino Library Manager or PlatformIO if it’s published there.
+
+```text
+ClickEncoder/
+├── library.properties
+└── src/
+    ├── ClickEncoder.h
+    └── ClickEncoder.cpp
+```
+
+## Quick start
 
 ```cpp
 #include <ClickEncoder.h>
-#include <TimerOne.h> // or Ticker on ESP32, or your platform's equivalent
+#include <TimerOne.h>
 
-ClickEncoder *encoder;
+ClickEncoder* encoder;
 
 void timerIsr() {
   encoder->service();
 }
 
 void setup() {
-  ClickEncoder::Config cfg{2, 3, 4}; // pinA, pinB, pinButton
+  ClickEncoder::Config cfg{2, 3, 4};
   encoder = new ClickEncoder(cfg);
 
   Timer1.initialize(1000); // 1ms
@@ -36,105 +56,232 @@ void setup() {
 
 void loop() {
   int16_t delta = encoder->getValue();
+
   if (delta != 0) {
-    // use delta
+    // handle rotation
   }
 
-  ClickEncoder::ButtonState btn = encoder->getButton();
-  if (btn == ClickEncoder::ButtonState::Clicked) {
+  if (encoder->getButton() == ClickEncoder::ButtonState::Clicked) {
     // handle click
   }
 }
 ```
 
-### Config
+## Configure pins
 
 ```cpp
 struct Config {
   uint8_t pinA;
   uint8_t pinB;
-  int16_t pinButton = -1;         // -1 disables button handling
-  uint8_t stepsPerNotch = 1;   // 1, 2, or 4 depending on encoder hardware
+  int16_t pinButton = -1;      // -1 disables button handling
+  uint8_t stepsPerNotch = 1;   // 1, 2, or 4, depending on your encoder
   uint8_t encoderPinsActive = LOW;
   uint8_t buttonPinActive = LOW;
 };
 ```
 
-Pins are configured as `INPUT_PULLUP` (or `INPUT` if the active level is `HIGH`) internally; no external pull resistors are required for the common case. Any GPIO pin can be used — no interrupt capability is needed, since decoding happens on the timer-driven `service()` call, not on pin-change interrupts.
+The library sets the pin mode based on the active level:
 
-If the encoder has no button, omit `pinButton` (it defaults to `-1`) and don't call any of the button-related methods.
+- `LOW` uses `INPUT_PULLUP`
+- `HIGH` uses `INPUT`
 
-### Rotation
+Most encoders with a common pin connected to GND don’t need external pull-up resistors.
 
-- `getValue()` — returns and clears the accumulated step delta since the last call, scaled by `stepsPerNotch` and by acceleration if enabled. If bounds are set, the return value is the actual (clamped or wrapped) change applied.
-- `setBounds(min, max, wrapAround)` — constrains the tracked absolute value to `[min, max]`. With `wrapAround = true`, exceeding a bound wraps to the other end instead of clamping.
-- `clearBounds()` — removes bounds tracking.
-- `setCurrentValue(v)` / `getTrackedValue()` — set/read the tracked absolute value. `getTrackedValue()` reflects the state as of the last `getValue()` call, not the raw pin state — it does not update on its own between `getValue()` calls.
-- `isMoving()` — returns true if there is unconsumed rotation delta pending.
+No push button? Leave out `pinButton` and don’t call the button methods.
 
-### Acceleration
+## Read rotation
 
-Acceleration increases the step size returned by `getValue()` when the encoder is rotated quickly. It is enabled by default.
-
-- `setAccelerationEnabled(bool)` / `getAccelerationEnabled()`.
-- `getAcceleration()` — reads the current raw internal acceleration value.
-- `setAccelConfig(AccelConfig)` / `getAccelConfig()` — adjust the acceleration curve at runtime:
+`getValue()` returns the movement since the last read, applies acceleration if it’s enabled, then clears the accumulated delta.
 
 ```cpp
-struct AccelConfig {
-  uint16_t top = 4000; // upper bound of the internal acceleration value
-  uint16_t inc = 45;   // increment applied per detent while moving
-  uint16_t dec = 4;    // decay applied per service() call while idle
-};
+int16_t delta = encoder->getValue();
+position += delta;
 ```
 
-The defaults assume `service()` is called every 1ms. If you use a different interval, `inc`/`dec` need to be re-tuned proportionally, or the acceleration curve will feel too fast or too slow.
+### Track a value
 
-Acceleration is commonly disabled while navigating a menu, where a fixed step size per detent is expected:
+Set bounds to have ClickEncoder track an absolute value:
+
+```cpp
+encoder->setBounds(0, 100);
+encoder->setCurrentValue(50);
+```
+
+You can also use:
+
+```cpp
+setBounds(min, max, wrapAround);
+clearBounds();
+
+setCurrentValue(value);
+getTrackedValue();
+
+getMin();
+getMax();
+```
+
+With wrap-around enabled, moving past either end jumps to the other:
+
+```text
+5 + 1 -> 0
+0 - 1 -> 5
+```
+
+With wrap-around off, the value stops at the bounds:
+
+```text
+5 + 1 -> 5
+0 - 1 -> 0
+```
+
+`getTrackedValue()` shows the value from the last `getValue()` call. Call `getValue()` first to process any pending movement:
+
+```cpp
+encoder->getValue();
+int16_t value = encoder->getTrackedValue();
+```
+
+`isMoving()` returns `true` when there’s rotation waiting to be read.
+
+### Menu example
 
 ```cpp
 encoder->setAccelerationEnabled(false);
+encoder->setBounds(0, 4, true);
+
+encoder->getValue(); // update the tracked value
+
+switch (encoder->getTrackedValue()) {
+  case 0: /* Menu item 0 */ break;
+  case 1: /* Menu item 1 */ break;
+  case 2: /* Menu item 2 */ break;
+  case 3: /* Menu item 3 */ break;
+  case 4: /* Menu item 4 */ break;
+}
 ```
 
-### Decoder mode
+## Acceleration
 
-The quadrature decoder strategy (`Normal`, `Flaky`, `HalfStep`) is a compile-time constant (`ClickEncoder::decoderMode` in `ClickEncoder.h`), not a runtime or macro-configurable option. `Normal` is the default and works for most encoders. If an encoder produces spurious or missed steps, edit `decoderMode` in the header directly and recompile.
+Acceleration is on by default. It increases the movement returned by `getValue()` when you turn the encoder quickly.
 
-### Button
+```cpp
+encoder->setAccelerationEnabled(true);
+encoder->setAccelerationEnabled(false);
 
-`getButton()` returns a `ClickEncoder::ButtonState`:
+bool enabled = encoder->getAccelerationEnabled();
+uint16_t accel = encoder->getAcceleration();
+```
+
+To tune the acceleration while your program runs:
+
+```cpp
+struct AccelConfig {
+  uint16_t top = 4000;
+  uint16_t inc = 45;
+  uint16_t dec = 4;
+};
+
+encoder->setAccelConfig(cfg);
+auto cfg = encoder->getAccelConfig();
+```
+
+- `top`: maximum acceleration value
+- `inc`: acceleration increase per movement
+- `dec`: acceleration drop per `service()` call
+
+These defaults assume `service()` runs every 1 ms. If your timer interval is different, adjust `inc` and `dec`.
+
+For menus, you may want to turn acceleration off so each detent moves one item.
+
+## Decoder mode
+
+The library has three quadrature decoder modes:
+
+```cpp
+Normal
+Flaky
+HalfStep
+```
+
+Choose the mode at compile time in `ClickEncoder.h`:
+
+```cpp
+static constexpr DecoderMode decoderMode = DecoderMode::Normal;
+```
+
+`Normal` works for most encoders. If yours misses steps or reads noisy transitions, try `Flaky` or `HalfStep`, then recompile.
+
+## Button events
 
 ```cpp
 enum class ButtonState : uint8_t {
-  Open, Pressed, Held, Released, Clicked, DoubleClicked, RepeatTicks
+  Open,
+  Pressed,
+  Held,
+  Released,
+  Clicked,
+  DoubleClicked,
+  RepeatTicks
 };
 ```
 
-- `Pressed` — fires once on the initial press edge.
-- `Held` — the button has been pressed longer than the hold threshold.
-- `RepeatTicks` — fires repeatedly at a fixed interval while held, after the initial `Held` transition.
-- `Released` — the button was released after a `Held`/`RepeatTicks` state.
-- `Clicked` — a short press and release, with no second click following within the double-click window.
-- `DoubleClicked` — two clicks within the double-click window.
+A short press goes through `Pressed`, then `Clicked`. A double-click ends with `DoubleClicked`. A long press goes through `Pressed`, then `Held`; while you keep holding, it can emit `RepeatTicks`. Releasing after a hold emits `Released`.
 
-Reading `getButton()` clears the state to `Open` except while `Held` or `RepeatTicks` is active.
+- `Pressed`: button just went down
+- `Held`: hold threshold reached
+- `RepeatTicks`: repeat event while held
+- `Released`: held button let go
+- `Clicked`: short press and release
+- `DoubleClicked`: two clicks inside the double-click window
+- `Open`: no pending event
 
-`setDoubleClickEnabled(bool)` disables double-click detection; a short click is then reported as `Clicked` without waiting out the double-click window, at the cost of not being able to distinguish single from double clicks.
+Read an event with `getButton()`:
 
-Timing thresholds (`ENC_BUTTONINTERVAL`, `ENC_DOUBLECLICKTIME`, `ENC_HOLDTIME`, `ENC_REPEAT_RATE`) are constants in `ClickEncoder.cpp`. Like the acceleration parameters, they assume `service()` is called every 1ms; both the button and double-click timing windows are counted in units of `service()` calls that pass the internal 10ms gate, not directly in elapsed wall-clock time.
+```cpp
+auto state = encoder->getButton();
+```
 
-### Other
+Reading it resets the state to `Open`, unless `Held` or `RepeatTicks` is active.
 
-- `reset()` — clears pending delta, acceleration, and button/click timing state.
+### Double-clicks
+
+```cpp
+encoder->setDoubleClickEnabled(false);
+```
+
+Turn off double-click detection to get `Clicked` right after a short press. You’ll get faster single-click response, but the library won’t distinguish single clicks from double-clicks.
+
+### Timing
+
+Button timing uses internal polling ticks. These constants in `ClickEncoder.cpp` assume `service()` runs every 1 ms:
+
+```cpp
+ENC_BUTTONINTERVAL
+ENC_DOUBLECLICKTIME
+ENC_HOLDTIME
+ENC_REPEAT_RATE
+```
+
+## Reset
+
+```cpp
+encoder->reset();
+```
+
+`reset()` clears pending rotation, acceleration state, button state, and click, hold, and repeat timing.
+
+It leaves your bounds, tracked value, and acceleration configuration alone.
 
 ## Examples
 
-- `ClickEncoderTest` — full example with an LCD display and acceleration toggling.
-- `BasicPolling` — minimal example, no timer library dependency, `service()` polled from `loop()`.
-- `BoundedMenu` — encoder as a wrapping menu selector using `setBounds()`.
-- `MultipleEncoders` — two encoders serviced from one shared timer interrupt.
-- `AccelerationTuning` — runtime `AccelConfig` adjustment, `getAcceleration()`, `isMoving()`, `reset()`.
+- `BasicPolling`: checks wiring by calling `service()` from `loop()`; no timer library needed
+- `ClickEncoderTest`: shows button states and acceleration on an LCD
+- `BoundedMenu`: shows tracked values, bounds, and wrap-around
+- `MultipleEncoders`: shares one timer interrupt across several encoders
+- `AccelerationTuning`: changes acceleration settings and uses `getAcceleration()`, `isMoving()`, and `reset()`
 
 ## Credits
 
-Quadrature decoding and button timing logic originally by Peter Dannegger. Original Arduino port by karl@pitrich.com.
+Quadrature decoding and button timing by Peter Dannegger. The original Arduino port was by karl@pitrich.com.
+
+The API update and library layout are based on the original 0xPIT/encoder project.
