@@ -36,6 +36,9 @@ void setup() {
   ClickEncoder::Config cfg{ENCODER_PIN_A, ENCODER_PIN_B, ENCODER_PIN_BTN};
   encoder = new ClickEncoder(cfg);
 
+  // Menus generally expect one step per detent rather than accelerated jumps.
+  encoder->setAccelerationEnabled(false);
+
   // Menu indices 0..MENU_COUNT-1, wrapping past either end.
   encoder->setBounds(0, MENU_COUNT - 1, /* wrapAround = */ true);
   encoder->setCurrentValue(0);
